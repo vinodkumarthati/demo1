@@ -21,13 +21,13 @@ pipeline any{
             stage('Build'){
                 steps{
                     echo 'Building the Application'
-                    sh "'${MVN_HOME}/bin/mvn' clean package"
+                    sh ' mvn clean package -DskipTests'
                 }
             }
             stage('test'){
                 steps{
                     echo 'Running Unit Tests'
-                    sh "'${MVN_HOME}/bin/mvn' test"
+                    sh ' mvn test '
                 }
             }
             stage('Run Application'){
@@ -42,18 +42,28 @@ pipeline any{
                     archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
 
                 }}
-                stage('Docker Build'){
-                steps{
-                    echo 'Building Docker Image'
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
+                script {
+                    sh """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    """
                 }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                echo "Running Docker container from image..."
+                script {
+                    sh """
+                        docker run -d -p 8001:8001 --name demo-app ${IMAGE_NAME}:${IMAGE_TAG} || true
+                    """
                 }
-                stage('Run the Container'){
-                    steps{
-                        echo 'running docker'
-                        sh "docker run -d -p 8000:8000 --name demo-app ${IMAGE_NAME}:${IMAGE_TAG} || true"
-                    }
-                }
+            }
+        }
+    }
                 stage('docker push'){
                     steps{
                         echo 'pushing the image to docker hub'
@@ -65,11 +75,14 @@ pipeline any{
                         }
                     }
                 }
-                post{always}{
-                    stage('succes'){
-                        steps{
-                            echo 'success'
+                post{ 
+                    always
+                    {
+                        success{
+                            echo 'pipeline completed succesfully'
                         }
+                        failure{
+                            echo 'pipeline failed'
                     }
                     }
                 
