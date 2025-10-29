@@ -63,18 +63,7 @@ pipeline any{
                 }
             }
         }
-    }
-                stage('docker push'){
-                    steps{
-                        echo 'pushing the image to docker hub'
-                        script{
-                            sh """
-                                echo ${password} | docker login -u ${username} -p ${pasword}
-                                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${username}/${repo}:${IMAGE_TAG}
-                                docker push ${username}/${repo}:${IMAGE_TAG}"""
-                        }
-                    }
-                }
+    
                 post{ 
                     always
                     {
