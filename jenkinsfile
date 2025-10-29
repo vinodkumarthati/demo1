@@ -58,11 +58,19 @@ pipeline any{
                     steps{
                         echo 'pushing the image to docker hub'
                         script{
-                            sh "
+                            sh """
                                 echo ${password} | docker login -u ${username} -p ${pasword}
                                 docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${username}/${repo}:${IMAGE_TAG}
-                                docker push ${username}/${repo}:${IMAGE_TAG}"
+                                docker push ${username}/${repo}:${IMAGE_TAG}"""
                         }
+                    }
+                }
+                post{always}{
+                    stage('succes'){
+                        steps{
+                            echo 'success'
+                        }
+                    }
                     }
                 }
                         }
@@ -73,87 +81,3 @@ pipeline any{
     }
 }
 
-pipeline {
-    agent any
-
-    tools {
-        maven 'Maven_3.9'
-        jdk 'JDK_17'
-    }
-
-    environment {
-        IMAGE_NAME = "vinod-demo-app"
-        IMAGE_TAG = "latest"
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                echo 'Cloning source code...'
-                git branch: 'main', url: 'https://github.com/vinodkumarthati/demo.git'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                echo 'Building with Maven...'
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Running tests...'
-                sh 'mvn test'
-            }
-        }
-
-        stage('Run Application') {
-            steps {
-                echo 'Running the Java App...'
-                sh 'java -cp target/demo-1.0.0.jar com.example.App'
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-                echo 'Archiving built JAR files...'
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
-                script {
-                    sh """
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    """
-                }
-            }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                echo "Running Docker container from image..."
-                script {
-                    sh """
-                        docker run -d -p 8000:8000 --name demo-app ${IMAGE_NAME}:${IMAGE_TAG} || true
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline completed.'
-        }
-        success {
-            echo '✅ Build successful! Docker image created and running.'
-        }
-        failure {
-            echo '❌ Build failed!'
-        }
-    }
-}
